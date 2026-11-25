@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Makefun Radar — Token launch value, in context</title>
+    <link rel="stylesheet" href="app.css">
+    <script src="../data.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="./" aria-label="Makefun Radar home">
+        <span class="brand-mark" aria-hidden="true">M<span>·</span></span>
+        <span>MAKEFUN <strong>RADAR</strong></span>
+      </a>
+      <div class="edition">
+        <span class="eyebrow">FROZEN SNAPSHOT</span>
+        <span id="snapshot-date" class="edition-date">Loading date</span>
+      </div>
+      <span class="version-tag">MODEL <b id="model-version">radar-1</b></span>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <p class="eyebrow accent">THE EARLY-PROTOCOL FIELD GUIDE</p>
+          <h1 id="page-title">Find the signal<br><em>before the ticker.</em></h1>
+          <p class="lede" id="lede">Loading the frozen protocol board…</p>
+          <p class="disclaimer">Implied value is a model, not a promise of a token launch or its future value.</p>
+        </div>
+        <div class="intro-art" aria-hidden="true">
+          <span class="orbit orbit-one"></span><span class="orbit orbit-two"></span>
+          <span class="orbit orbit-three"></span><span class="orbit-core"></span>
+          <span class="art-label">ONCHAIN<br>FIELD NOTES</span>
+          <span class="art-coordinate">01 / RADAR</span>
+        </div>
+      </section>
+
+      <section class="board-section" aria-labelledby="board-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow accent">THE BOARD</p>
+            <h2 id="board-title">Protocols worth a closer look</h2>
+          </div>
+          <p class="section-note">Ranked by a consistent, transparent value model.</p>
+        </div>
+
+        <div class="toolbar" aria-label="Board controls">
+          <label class="search-wrap">
+            <span class="visually-hidden">Search name, slug, category or chain</span>
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input id="search" type="search" placeholder="Search protocol, category, chain…" autocomplete="off">
+          </label>
+          <label class="category-wrap">
+            <span class="visually-hidden">Filter by category</span>
+            <select id="category-filter">
+              <option value="all">All categories</option>
+            </select>
+          </label>
+          <div class="view-switch" role="group" aria-label="Token status">
+            <button type="button" class="view-button is-active" data-view="pre">Pre-token <span id="pre-count">0</span></button>
+            <button type="button" class="view-button" data-view="live">Live token <span id="live-count">0</span></button>
+          </div>
+        </div>
+
+        <p id="live-caption" class="live-caption" hidden>The reported market caps are the market’s own value, not a model estimate.</p>
+        <div class="table-meta">
+          <span id="result-count">Loading rows</span>
+          <span class="sort-hint">Select a heading to sort <span aria-hidden="true">↕</span></span>
+        </div>
+        <div class="table-frame">
+          <table id="protocol-table">
+            <thead>
+              <tr id="table-head">
+                <th scope="col"><button class="sort-button" data-sort="rank">Rank <span aria-hidden="true">↕</span></button></th>
+                <th scope="col"><button class="sort-button" data-sort="name">Protocol <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" class="numeric"><button class="sort-button" data-sort="tvl_usd">TVL <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" class="numeric"><button class="sort-button" data-sort="change_7d">7d growth <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" class="numeric"><button class="sort-button" data-sort="age_days">Age <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" class="numeric value-column"><button class="sort-button" data-sort="implied_value_usd">Implied value <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" class="status-column">Status</th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+              <tr><td class="empty-state" colspan="7">Preparing the board…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="table-footnote">Values are rounded estimates from frozen protocol data. A listed protocol is not an endorsement.</p>
+      </section>
+
+      <section class="method-section" aria-labelledby="method-title">
+        <div class="method-copy">
+          <p class="eyebrow accent">OPEN MODEL / RADAR-1</p>
+          <h2 id="method-title">How implied value is computed</h2>
+          <p class="formula-line" id="formula-line">Loading model formula…</p>
+          <p class="method-note">Every row is scored by the same function; no protocol name is special-cased. Inputs are frozen to the snapshot date above.</p>
+          <div id="constants" class="constant-list" aria-label="Model constants"></div>
+        </div>
+        <div class="factor-card">
+          <p class="eyebrow">CATEGORY FACTORS</p>
+          <div id="category-factors" class="factor-list"></div>
+          <p class="factor-foot">Unlisted and uncategorised records use the default factor of 1.00×.</p>
+        </div>
+      </section>
+
+      <footer class="page-footer">
+        <span>MAKEFUN RADAR <span class="footer-dot">·</span> A research aid, not financial advice</span>
+        <span id="source-note">Frozen source record</span>
+      </footer>
+    </main>
+
+    <dialog id="detail-dialog" aria-labelledby="detail-title">
+      <div class="dialog-shell">
+        <button type="button" class="dialog-close" aria-label="Close protocol details">×</button>
+        <div id="detail-content"></div>
+      </div>
+    </dialog>
+  </body>
+</html>
