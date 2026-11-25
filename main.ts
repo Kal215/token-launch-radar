@@ -1,8 +1,10 @@
 import { cpSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-board.ts';
 import { boardIssue, buildBoard, buildRadar, parseSnapshot } from './lib/model.ts';
+
+const repositoryDirectory = fileURLToPath(new URL('.', import.meta.url));
 
 function option(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
@@ -42,8 +44,8 @@ function run(): void {
   mkdirSync(outputPath, { recursive: true });
   writeFileSync(join(outputPath, 'board.json'), `${JSON.stringify({ rows }, null, 2)}\n`);
   writeFileSync(join(outputPath, 'data.js'), `window.RADAR=${JSON.stringify(radar)};\n`);
-  cpSync(resolve('dashboard'), join(outputPath, 'dashboard'), { recursive: true });
-  cpSync(resolve('screenshots'), join(outputPath, 'screenshots'), { recursive: true });
+  cpSync(resolve(repositoryDirectory, 'dashboard'), join(outputPath, 'dashboard'), { recursive: true });
+  cpSync(resolve(repositoryDirectory, 'screenshots'), join(outputPath, 'screenshots'), { recursive: true });
 
   const dossier = buildDossier(outputPath, {
     text_max_bytes: 65536,
