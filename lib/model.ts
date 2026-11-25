@@ -9,10 +9,11 @@
 // Implied value follows only from the snapshot's own figures:
 //
 //   base       = tvl_usd x BASE_MULTIPLE
-//   growth     = clamp(change_7d, -60, 120) per cent
-//   growthMult = 1 + (growth / 100) x GROWTH_WEIGHT
-//   maturity   = 0.6 + min(age_days, 1095) / 1095 x 0.4   (age_days unknown: 365)
-//   implied    = max(1, round(base x growthMult x maturity))
+//   growth     = exp(clamp(change_7d, -60, 120) / 100 x GROWTH_WEIGHT)
+//   maturity   = MATURITY_FLOOR + MATURITY_RANGE x age / (age + MATURITY_DAYS)
+//   breadth    = 1 + min(chains.length, CHAIN_CAP) x CHAIN_WEIGHT
+//   category   = CATEGORY_FACTORS[lowercase(category)] or CATEGORY_DEFAULT
+//   implied    = max(1, round(base x growth x maturity x breadth x category))
 //
 // The constants are the house model's, stated in the dashboard and changeable in the model sandbox. No
 // protocol name is ever special-cased: the same function scores every row.
@@ -50,17 +51,40 @@ export interface ModelConstants {
   maturity_range: number;
   maturity_days: number;
   unknown_age_days: number;
+  chain_weight: number;
+  chain_cap: number;
+  category_default: number;
+  category_factors: Record<string, number>;
 }
 
 export const MODEL: ModelConstants = {
   base_multiple: 0.25,
-  growth_weight: 0.5,
+  growth_weight: 0.45,
   growth_floor: -60,
   growth_cap: 120,
   maturity_floor: 0.6,
   maturity_range: 0.4,
-  maturity_days: 1095,
+  maturity_days: 365,
   unknown_age_days: 365,
+  chain_weight: 0.04,
+  chain_cap: 8,
+  category_default: 1,
+  category_factors: {
+    'bridge': 0.96,
+    'canonical bridge': 0.96,
+    'cdp': 1.08,
+    'cross chain bridge': 0.96,
+    'dexs': 1.02,
+    'lending': 1.12,
+    'liquid restaking': 1.06,
+    'onchain capital allocator': 1.06,
+    'prediction market': 1.02,
+    'restaking': 1.04,
+    'risk curators': 1.08,
+    'rwa': 1.04,
+    'uncollateralized lending': 1.1,
+    'yield aggregator': 1.03,
+  },
 };
 
 /** The model's version label: the dashboard names it and the rules quote it. */
@@ -100,6 +124,8 @@ export interface BoardRow {
     growth_pct: number;
     growth_multiplier: number;
     maturity_multiplier: number;
+    breadth_multiplier: number;
+    category_multiplier: number;
     age_days: number | null;
   };
   farm_steps: string[];
@@ -120,6 +146,8 @@ export interface RadarRow {
   implied_value_usd: number;
   growth_multiplier: number;
   maturity_multiplier: number;
+  breadth_multiplier: number;
+  category_multiplier: number;
 }
 
 /** A live-token protocol: it already trades, so the board shows the market's own value, not a model's. */
@@ -172,17 +200,29 @@ export function ageDays(asOf: string, listedAt: string | null): number | null {
   return Math.max(0, Math.floor((a - b) / DAY_MS));
 }
 
-/** The three multipliers and the implied value one protocol gets under `model`. */
-export function impliedValue(protocol: SnapshotProtocol, asOf: string, model: ModelConstants): { implied: number; growthPct: number; growthMult: number; maturityMult: number; age: number | null } {
+/** The derived multipliers and the implied value one protocol gets under `model`. */
+export function impliedValue(protocol: SnapshotProtocol, asOf: string, model: ModelConstants): {
+  implied: number;
+  growthPct: number;
+  growthMult: number;
+  maturityMult: number;
+  breadthMult: number;
+  categoryMult: number;
+  age: number | null;
+} {
   const age = ageDays(asOf, protocol.listed_at);
   const rawGrowth = finite(protocol.change_7d, 0);
   const growthPct = Math.min(model.growth_cap, Math.max(model.growth_floor, rawGrowth));
-  const growthMult = 1 + (growthPct / 100) * model.growth_weight;
+  const growthMult = Math.exp((growthPct / 100) * model.growth_weight);
   const ageForModel = age ?? model.unknown_age_days;
-  const maturityMult = model.maturity_floor + (Math.min(Math.max(ageForModel, 0), model.maturity_days) / model.maturity_days) * model.maturity_range;
+  const positiveAge = Math.max(ageForModel, 0);
+  const maturityMult = model.maturity_floor + (positiveAge / (positiveAge + model.maturity_days)) * model.maturity_range;
+  const breadthMult = 1 + Math.min(protocol.chains.length, model.chain_cap) * model.chain_weight;
+  const categoryMult = model.category_factors[(protocol.category ?? '').trim().toLowerCase()] ?? model.category_default;
   const base = protocol.tvl_usd * model.base_multiple;
-  const implied = Math.max(1, Math.round(base * growthMult * maturityMult));
-  return { implied, growthPct, growthMult, maturityMult, age };
+  const rawImplied = base * growthMult * maturityMult * breadthMult * categoryMult;
+  const implied = Math.max(1, Math.min(100_000_000_000_000, Math.round(rawImplied)));
+  return { implied, growthPct, growthMult, maturityMult, breadthMult, categoryMult, age };
 }
 
 /** DefiLlama's version-marker rule: a name ending in a release is a pool of another protocol. */
@@ -230,8 +270,8 @@ export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): B
   for (const p of early) chosen.set(p.slug, p);
 
   const scored = [...chosen.values()].map((p) => {
-    const { implied, growthPct, growthMult, maturityMult, age } = impliedValue(p, snapshot.as_of, model);
-    return { p, implied, growthPct, growthMult, maturityMult, age };
+    const { implied, growthPct, growthMult, maturityMult, breadthMult, categoryMult, age } = impliedValue(p, snapshot.as_of, model);
+    return { p, implied, growthPct, growthMult, maturityMult, breadthMult, categoryMult, age };
   });
   scored.sort((a, b) => b.implied - a.implied || (a.p.slug < b.p.slug ? -1 : a.p.slug > b.p.slug ? 1 : 0));
   return scored.map((s, i) => ({
@@ -254,6 +294,8 @@ export function buildBoard(snapshot: Snapshot, model: ModelConstants = MODEL): B
       growth_pct: s.growthPct,
       growth_multiplier: round4(s.growthMult),
       maturity_multiplier: round4(s.maturityMult),
+      breadth_multiplier: round4(s.breadthMult),
+      category_multiplier: round4(s.categoryMult),
       age_days: s.age,
     },
     farm_steps: farmSteps(s.p, s.age).map(stepText),
@@ -384,6 +426,8 @@ export function radarRow(row: BoardRow): RadarRow {
     implied_value_usd: row.implied_value_usd,
     growth_multiplier: row.model.growth_multiplier,
     maturity_multiplier: row.model.maturity_multiplier,
+    breadth_multiplier: row.model.breadth_multiplier,
+    category_multiplier: row.model.category_multiplier,
   };
 }
 
